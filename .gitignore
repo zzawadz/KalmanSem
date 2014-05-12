@@ -6,3 +6,17 @@
 
 # R data files from past sessions
 .Rdata
+.Rproj*
+*.aux
+*.bcf
+*.nav
+*.out
+figure
+*.tex
+*.toc
+*.snm
+*.run.xml
+*.log
+cache
+*.blg
+*.bbl

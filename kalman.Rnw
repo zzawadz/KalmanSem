@@ -1,0 +1,325 @@
+\documentclass[10pt]{beamer}
+%\usepackage[MeX]{polski}
+\usepackage[utf8]{inputenc} 
+%\usepackage[polish]{babel}    
+\usepackage{parskip}
+\usepackage{latexsym,gensymb,amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{caption}
+\usepackage{wrapfig}
+\usepackage{multicol}
+\usepackage[QX]{fontenc}
+\usepackage{lmodern}
+
+\newcommand{\dxpt}{\ensuremath{\hat{x}_{t|t-1}}}
+\newcommand{\dxtt}{\ensuremath{\hat{x}_{t-1|t-1}}}
+\newcommand{\dxt}{\ensuremath{\hat{x}_{t|t}}}
+
+\newcommand{\dPpt}{\ensuremath{{P}_{t|t-1}}}
+\newcommand{\dPtt}{\ensuremath{{P}_{t-1|t-1}}}
+\newcommand{\dPt}{\ensuremath{{P}_{t|t}}}
+
+
+
+\usepackage[sorting=none,backend=biber,bibencoding=utf8]{biblatex} % load the package
+\addbibresource{bibliografia.bib} % add a bib-reference file
+
+
+
+\author{Mateusz Stachnik, Zygmunt Zawadzki}
+
+\institute{Otwarte seminarium Katedry Statystyki}
+
+
+\title{Dylematy związane ze stosowaniem Filtru Kalmana w prognozowaniu zjawisk ekonomicznych}
+\begin{document}
+\frame{
+\titlepage
+}
+
+
+\section{Wprowadzenie}
+\frame{\frametitle{Wprowadzenie} 
+\tableofcontents
+}
+
+
+\frame{\frametitle{Materiały dodatkowe} 
+Prezentacja powstała z wykorzystaniem R, Matlaba, \LaTeX 'a i knitr'a \footnote{\url{http://yihui.name/knitr/}}. Na uwagę zasługuje szczególnie knitr, który pozwolił w łatwy sposób zintegrować R i \LaTeX 'a.
+
+Kod R użyty do wygenerowania przykładów w prezentacji można znaleźć w internecie pod adresem \url{https://github.com/zzawadz/KalmanSem}.
+
+<<cache=FALSE,echo=FALSE, message=FALSE>>=
+require(knitr)
+opts_chunk$set(cache=TRUE,message=FALSE, warning=FALSE, echo = FALSE)
+@
+
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Przestrzeń stanów}
+
+\frame{\frametitle{Przestrzeń stanów} 
+
+Reprezentacja modelu w przestrzeni stanów pozwala nam "rozbić" model na część której nie obserwujemy bezpośrednio, jednak wpływa na dynamikę zjawiska i na wyjście procesu, które jesteśmy w stanie obserwować. Taki podział sprowadza się do dwóch równań:
+
+\begin{equation}
+\begin{split}
+\dot{x}(t) = \Psi(x(t), t) \\
+y(t) = f(x(t), t)
+\end{split}
+\end{equation}
+
+W ogólności funckcje $\Psi$ i $f$ są nieliniowe, jednak w dalszej częsci ograniczmy się jedynie do funkcji liniowych - ma to związek faktem, że filtr Kalmana jest filtrem liniowym.
+
+}
+
+\frame{\frametitle{Przestrzeń stanów} 
+
+Przedstawione równanie odnosi się do procesu w czasie ciągłym, dla modelu z czasem dyskretnym równania stanu wyglądają podobnie:
+
+\begin{equation}
+\begin{split}
+x(t+1) = \xi(x(t), t) \\
+y(t) = f(x(t), t)
+\end{split}
+\end{equation}
+
+Ostatecznie w dalszej częsci pracy interesować nas będą dyskretne modele liniowe dodatkowo zaszumione gaussowskim białym szumem:
+
+\begin{equation}
+\begin{split}
+x(t+1) = A_tx(t) + B_tu(t) + w(t) \\
+y(t) = H_tx(t) + v(t)
+\end{split}
+\end{equation}
+
+gdzie $A_t$,$B_t$,$H_t$ to znane macierze opisujące układ (w ogólności mogą zmieniać się w czasie), a $w(t) \sim GWN(0,W)$, $v(t) \sim GWN(0,V)$, a $W$ i $V$ są diagonalne.
+
+}
+
+\section{Filtr - główna idea}
+
+\frame{\frametitle{Filtr - główna idea. Trend liniowy} 
+
+Celem filtru jest estymacja nieobserwowanych wartości zmiennych stanu. 
+
+Bardzo prostym i intuicyjnym przykładem jest model trendu liniowego - który możemy zapisać w przestrzeni stanów w postaci:
+\begin{equation}
+\begin{split}
+\begin{bmatrix} \alpha \\ \beta \end{bmatrix} = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} \alpha \\ \beta \end{bmatrix}\\
+y(t) = \begin{bmatrix} 1 & 0 \end{bmatrix} \begin{bmatrix} \alpha \\ \beta \end{bmatrix} + v(t)
+\end{split}
+\end{equation}
+
+Parametry $\alpha$ i $\beta$ są nieobserwowanymi zmiennymi stanu, które w procesie filtracji chcemy estymować.
+
+}
+
+\frame{\frametitle{Filtr - główna idea. Trend liniowy - równania.} 
+\begin{align*}
+&\begin{bmatrix} \alpha \\ \beta \end{bmatrix} = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} \alpha \\ \beta \end{bmatrix}\\
+&y(t) = \begin{bmatrix} 1 & 0 \end{bmatrix} \begin{bmatrix} \alpha \\ \beta \end{bmatrix} + v_t
+\end{align*}
+\begin{align*}
+t = 1 \\
+&y_1 = \alpha_1 + v_1 \\
+&\alpha_1 = \alpha_0 + \beta_0 \\
+&\beta_1 = \beta_0 \\
+\\
+t = 2 \\
+&y_2 = \alpha_2 + v_2 = \alpha_0 + 2 \beta_0 \\
+&\alpha_2 = \alpha_1 + \beta_1 = \alpha_0 + \beta_0 + \beta_1 = \alpha_0 + 2 \beta_0 \\
+&\beta_2 = \beta_1 = \beta_0
+\end{align*}
+
+\textbf{Jaki więc zysk ma ekonomista z wykorzystania przestrzeni stanów?}
+
+}
+
+
+\frame{\frametitle{Model trendu liniowego ze zmieniającymi się parametrami} 
+
+Co więcej przedstawienie modelu w przestrzeni stanów pozwala nam rozszerzyć klasę omawianych modeli. Zaprezentowany przepadek trendu możemy rozszerzyć na przypadek zmieniających się w czasie parametrów np. $\alpha$ i $\beta$ podlegają błądzeniu losowemu - wtedy równania stanu będą wyglądały następująco:
+
+\begin{equation}
+\begin{split}
+\begin{bmatrix} \alpha_{t+1} \\ \beta_{t+1} \end{bmatrix} = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} \alpha_t \\ \beta_t \end{bmatrix} + w_t\\
+y_t = \begin{bmatrix} 1 & 0 \end{bmatrix} \begin{bmatrix} \alpha_t \\ \beta_t \end{bmatrix} + v_t
+\end{split}
+\end{equation}
+
+
+}
+
+
+
+\frame{\frametitle{Model trendu liniowego ze zmieniającymi się parametrami} 
+<<echo=FALSE,fig.height = 3, fig.width = 4, message = FALSE>>=
+source("KodR/exTrend.R")
+@
+
+}
+
+\frame{\frametitle{Model trendu liniowego ze zmieniającymi się parametrami - realizacje i wartości estymowane} 
+<<echo=FALSE,fig.height = 3, fig.width = 4, message = FALSE>>=
+source("KodR/exTrendEstPar.R")
+@
+
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Filtr Kalmana}
+
+\frame{\frametitle{Filtr Kalmana} 
+
+
+"Zadaniem filtracji Kalmana jest estymacja wartości wektora stanu x oraz wektora wyjściowego y na podstawie zmierzonych próbek obarczonych szumem".\cite{osowki}.
+
+Cały proces przebiega dwuetapowo - najpierw następuje faza predyckji na chwilę $t$, na podstawie chwili $t-1$, następnie na podstawie obserwacji (już w chwili t), następuje uaktualnienie estymowanych wartości.
+
+Dla ustalenia uwagi:
+\begin{equation}
+\begin{split}
+x_{t} = Ax_{t-1} + Bu_t + w_t \\
+y_t = Hx_t + v_t
+\end{split}
+\end{equation}
+\begin{tabular}{rr}
+
+  $x_t$ - wektor zmiennych nieobserwowanych   & $u_t$ - wektor sterowania - znany\\
+  $y_t$ - wektor wyjścia - obserwowany & A,B,H - znane macierze \\
+  $w_t \sim GWN(0,W)$ & $v_t \sim GWN(0,V)$ \\
+  W i V - diagonalne macierze kowariancji. &
+
+\end{tabular} 
+
+}
+
+\subsection{Faza predykcji}
+
+\frame{\frametitle{Faza predykcji} 
+
+Faza predyckji opisana jest następującymi wzorami:
+\begin{equation}
+\label{eq:predmean}
+\dxpt = A\dxtt + Bu_t 
+\end{equation}
+\begin{equation}
+\label{eq:predcov}
+\dPpt = AP_{t-1|t-1}A' + W
+\end{equation}
+We wzorach pojawia się nowa macierz $\dPpt$ - jest to macierz kowariancji dla prognozy pod warunkiem chwili $t-1$, definiowana jako:
+\begin{equation}
+\label{eq:ppt1}
+\begin{split}
+\dPpt = E[(x_t-\dxpt)(x_t-\dxpt)']
+\end{split}
+\end{equation}
+natomiast $\dPt$ to macierz kowariancji dla $x_t$ w chwili $t$ definiowana jako:
+\begin{equation}
+\label{eq:ppt1}
+\begin{split}
+\dPt = E[(x_t-\dxt)(x_t-\dxt)']
+\end{split}
+\end{equation}
+W chwili uaktualniania $\dPtt$ jest znana - obliczana jest ona bowiem w chwili $t-1$.
+
+}
+
+\subsection{Faza uaktualnienia}
+
+\frame{\frametitle{Faza uaktualnienia} 
+
+W momencie dokonania pomiaru następuje uatktualnienie wartości zmiennych stanu, na podstawie następujących wzorów:
+
+\begin{equation}
+\label{eq:gain}
+K_t = (\dPpt H')(H \dPpt H' + V)^{-1}
+\end{equation}
+\begin{equation}
+\label{eq:mean}
+\dxt = \dxpt + K_t(y_t - H\dxpt)
+\end{equation}
+\begin{equation}
+\label{eq:cov}
+\dPt = \dPpt - K_tH\dPpt 
+\end{equation}
+Najbardziej kluczową wartością jest $K_t$ nazywane wzmocnieniem Kalmana - określa wpływ zaobserwowanego odychenia wartości obserwowanej od predykcji ($y_t - H\dxpt$) na aktualizację wartości zmiennych stanu - im $K_t$ większe, tym większa waga będzie przykładana obserwacji.
+
+
+}
+
+\subsection{Wzmocnienie Kalmana}
+
+\frame{\frametitle{Wzmocnienie Kalmana} 
+
+
+}
+
+\section{Przykład - mechanika}
+
+\frame{\frametitle{Przykład - mechanika} 
+
+}
+
+
+\section{Przykład - estymacja procesu SV}
+
+\frame{\frametitle{Przykład - estymacja procesu SV} 
+
+}
+
+
+\section{Dylematy?}
+
+\frame{\frametitle{Dylematy?} 
+
+}
+
+\section{Bibliografia}
+\frame{\frametitle{Bibliografia - podstawy} 
+\begin{refsection}
+
+\nocite{commandeur2007introduction}
+\nocite{kalie}
+\nocite{konar}
+\printbibliography[heading=subbibliography]
+
+\end{refsection}
+}
+
+
+\frame{\frametitle{Bibliografia - układy dynamiczne} 
+\begin{refsection}
+
+\nocite{osowski}
+\printbibliography[heading=subbibliography]
+
+\end{refsection}
+}
+
+
+
+\frame{\frametitle{Bibliografia - Filtr Kalmana w R} 
+\begin{refsection}
+\nocite{Tusell}
+\nocite{Petris2}
+\nocite{Petris}
+\printbibliography[heading=subbibliography]
+\end{refsection}
+}
+
+
+
+
+\end{document}
