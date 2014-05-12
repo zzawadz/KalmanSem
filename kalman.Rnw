@@ -57,56 +57,355 @@ opts_chunk$set(cache=TRUE,message=FALSE, warning=FALSE, echo = FALSE)
 
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Rys historyczny}
+
+
+\frame{\frametitle{Rudolf Kalman} 
+
+\begin{figure}
+\includegraphics[scale = 0.4]{obrazki/Rudolf_Kalman}
+\caption{Źródło: Wikipedia}
+\end{figure}
+
+\begin{itemize}
+\item Urodzony w 1930 na Węgrzech. 
+\item 1960 publikacja Filtru Kalmana.
+\item Do dzisiaj wykłada.
+\end{itemize}
+
+
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Przestrzeń stanów}
 
-\frame{\frametitle{Przestrzeń stanów} 
+\frame{\frametitle{Przestrzeń stanów - wprowadzenie - rys historyczny} 
 
-Reprezentacja modelu w przestrzeni stanów pozwala nam "rozbić" model na część której nie obserwujemy bezpośrednio, jednak wpływa na dynamikę zjawiska i na wyjście procesu, które jesteśmy w stanie obserwować. Taki podział sprowadza się do dwóch równań:
+W klasycznej teorii sterowania można było sterować układami o jednym wejściu i jednym wyjściu. Wraz z programem Apollo pojawiała się potrzeba sterowania wieloma obiektami jednocześnie. Problem polegał na tym, że występowały oddziaływania między obiektami.
 
-\begin{equation}
-\begin{split}
-\dot{x}(t) = \Psi(x(t), t) \\
-y(t) = f(x(t), t)
-\end{split}
-\end{equation}
 
-W ogólności funckcje $\Psi$ i $f$ są nieliniowe, jednak w dalszej częsci ograniczmy się jedynie do funkcji liniowych - ma to związek faktem, że filtr Kalmana jest filtrem liniowym.
+%%% dodać np
+\begin{align*}
+Y = G \cdot X \\
+G = \frac{1}{s+1}
+\end{align*}
+gdzie $G$ to transmitancja operatorowa układu, $Y$ to wyjście, $X$ wejście, $s$ - operator Laplace'a.
+}
+
+\frame{\frametitle{Przestrzeń stanów - wprowadzenie} 
+Problem pojawiał się w opisie prostego układu o dwóch wejściach i dwóch wyjściach.
+\begin{align*}
+Y_1 = G_{11} \cdot X_1 + G_{12} \cdot X_2 \\
+Y_2 = G_{21} \cdot X_1 + G_{22} \cdot X_2
+\end{align*}
+
+W podejściu przestrzeni stanów rozdziela się układ na dwie części. Część stanu, oraz część wyjścia. Powyższy układ można dzięki temu zapisać dwoma równaniami.
+\begin{align*}
+&\dot{x}(t) = A_cx(t) + B_cu(t) \\
+&y(t) = H_cx(t) + D_cu(t)
+\end{align*}
+gdzie $A_c$ - macierz stanu, $B_c$ - macierz sterowania, $H_c$ - macierz wyjścia, $D_c$ - macierz transmisji. 
+
+Oczywiste wydaje się, że zapis w przestrzeni stanów jest dużo prostszy i łatwo można go wykorzystać w dużych systemach. W dodatku jest bardziej ogólny niż zapis transmitancyjny. 
 
 }
 
-\frame{\frametitle{Przestrzeń stanów} 
 
-Przedstawione równanie odnosi się do procesu w czasie ciągłym, dla modelu z czasem dyskretnym równania stanu wyglądają podobnie:
+\frame{\frametitle{Przestrzeń stanów - układ dyskretny} 
 
-\begin{equation}
-\begin{split}
-x(t+1) = \xi(x(t), t) \\
-y(t) = f(x(t), t)
-\end{split}
-\end{equation}
+Model dla czasu ciągłego postaci:
+\begin{align*}
+&\dot{x}(t) = A_cx(t) + B_cu(t) \\
+&y(t) = H_cx(t) + D_cu(t)
+\end{align*}
+można również przedstawić w dziedzinie dyskretnej:
+\begin{align*}
+&x(t+1) = Ax(t) + Bu(t) \\
+&y(t) = Hx(t)
+\end{align*}
 
-Ostatecznie w dalszej częsci pracy interesować nas będą dyskretne modele liniowe dodatkowo zaszumione gaussowskim białym szumem:
-
-\begin{equation}
-\begin{split}
-x(t+1) = A_tx(t) + B_tu(t) + w(t) \\
-y(t) = H_tx(t) + v(t)
-\end{split}
-\end{equation}
-
-gdzie $A_t$,$B_t$,$H_t$ to znane macierze opisujące układ (w ogólności mogą zmieniać się w czasie), a $w(t) \sim GWN(0,W)$, $v(t) \sim GWN(0,V)$, a $W$ i $V$ są diagonalne.
+Istnieją metody pozwalające na przejście z czasu ciągłego do dyskretnego i z powrotem.
 
 }
 
-\section{Filtr - główna idea}
+\frame{\frametitle{Przykład - estymacja pozycji pojazdu} 
+ 
+Równania opisujące dynamikę układu:
+\begin{align*}
+v_{t+1} &= v_t + a_t T_p + w_v \\
+s_{t+1} &= s_t + v_tT_p + \frac{1}{2}a_tT^2_p +w_s
+\end{align*}
 
-\frame{\frametitle{Filtr - główna idea. Trend liniowy} 
+Układ zapisany w przestrzeni stanów:
+\begin{align*}
+\begin{bmatrix} s_{t+1} \\ v_{t+1} \end{bmatrix} &= \begin{bmatrix} 1 & T_p \\ 0 & 1 \end{bmatrix} \begin{bmatrix} s_{t} \\ v_{t} \end{bmatrix} + \begin{bmatrix} w_{st} \\ w_{vt} \end{bmatrix} \\
+y_t &= \begin{bmatrix} 1 & 0\end{bmatrix} \begin{bmatrix} s_t \\ v_t \end{bmatrix} + z_t
+\end{align*}
+$T_p$ - czas próbkowania, równy $0.05s$
 
-Celem filtru jest estymacja nieobserwowanych wartości zmiennych stanu. 
+}
+
+
+\frame{\frametitle{Przykład - estymacja pozycji pojazdu} 
+\begin{center}
+$\sigma_a = 0.1$,~~  $\sigma_s = 0.1$
+\end{center}
+\begin{figure}
+\includegraphics[scale = 0.55]{obrazki/przegiegS}
+\end{figure}
+}
+
+
+\frame{\frametitle{Cel filtracji} 
+
+Głównym celem filtracji jest poznanie rzeczywistej wartości sygnału. Czasem problemem jest też fakt, że sygnał mocno zaszumiony jest trudny do przetwarzania, szczególnie tyczy się to różniczkowania takiego sygnału.
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/filtr}
+\end{figure}
+
+}
+
+
+\frame{\frametitle{Filtr analogowy} 
+
+Filtry analogowe projektuje się zazwyczaj w domenie częstotliwości. 
+
+\begin{figure}
+\includegraphics[scale = 0.43]{obrazki/anal1}
+\end{figure}
+
+}
+
+\frame{\frametitle{Filtr analogowy - dolnoprzepustowy drugiego rzędu} 
+\begin{figure}
+\includegraphics[scale = 0.43]{obrazki/anal2}
+\end{figure}
+}
+
+\frame{\frametitle{Realizacja filtru dolnoprzepustowego jako filtru cyfrowego} 
+
+\begin{align*}
+G = \frac{1}{s^2 + s + 1}
+\end{align*}
+przechodząc z transmitancji ciągłej do dyskretnej metodą ZOH (ZERO ORDER HOLD) z czasem próbkowania 0.05s otrzymujemy:
+\begin{align*}
+G = \frac{0.0012z^{-1} + 0.0012 z^{-2}}{1 - 1.949z^{-1} + 0.095z^{-2}}
+\end{align*}
+Z transmitancji dyskretnej można w prosty sposób przejść na równanie różnicowe:
+\begin{align*}
+y_t = 0.0012x_{t-1} + 0.0012 x_{t-2} + 1.949y_{t-1} - 0.095y_{t-2}
+\end{align*}
+
+}
+
+
+\frame{\frametitle{Charakterystyka czasowa - położenie} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/anal3}
+\end{figure}
+}
+
+\frame{\frametitle{Charakterystyka czasowa - prędkość} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/anal4}
+\end{figure}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Filtr cyfrowy - średnia ruchoma} 
+
+Prosta średnia ruchoma jest klasycznym filtrem cyfrowym typu MA:
+\begin{align*}
+y_t = \frac{1}{n}\sum^{t}_{i = t-n+1} x_{t-i}
+\end{align*}
+
+W rozważanym przypadku przyjęto $n = 10$.
+ 
+}
+
+\frame{\frametitle{Filtr cyfrowy - charakterystyka czasowa - położenie} 
+
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/smooth1}
+\end{figure}
+
+}
+
+\frame{\frametitle{Filtr cyfrowy - charakterystyka czasowa - prędkość} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/smooth2}
+\end{figure}
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Filtr Kalmana}
+
+\frame{\frametitle{Filtr Kalmana} 
+
+
+Zadaniem filtracji Kalmana jest estymacja wartości wektora stanu x przy niepewnych parametrach obiektu na podstawie zmierzonych próbek obarczonych szumem.
+
+Cały proces przebiega dwuetapowo - najpierw następuje faza predyckji na chwilę $t$, na podstawie chwili $t-1$, następnie na podstawie obserwacji (już w chwili t), następuje uaktualnienie estymowanych wartości.
+
+Dla ustalenia uwagi:
+\begin{equation}
+\begin{split}
+x_{t} = Ax_{t-1} + Bu_t + w_t \\
+y_t = Hx_t + v_t
+\end{split}
+\end{equation}
+\begin{tabular}{rr}
+
+  $x_t$ - wektor zmiennych stanu   & $u_t$ - wektor sterowania - znany\\
+  $y_t$ - wektor wyjścia - obserwowany & A,B,H - znane macierze \\
+  $w_t \sim WN(0,W)$ & $v_t \sim WN(0,V)$ \\
+  W i V - diagonalne macierze kowariancji. &
+
+\end{tabular} 
+
+}
+
+\subsection{Faza predykcji}
+
+\frame{\frametitle{Faza predykcji} 
+
+Faza predykcji opisana jest następującymi wzorami:
+\begin{equation}
+\label{eq:predmean}
+\dxpt = A\dxtt + Bu_t 
+\end{equation}
+\begin{equation}
+\label{eq:predcov}
+\dPpt = AP_{t-1|t-1}A' + W
+\end{equation}
+We wzorach pojawia się nowa macierz $\dPpt$ - jest to macierz kowariancji dla prognozy pod warunkiem chwili $t-1$, definiowana jako:
+\begin{equation}
+\label{eq:ppt1}
+\begin{split}
+\dPpt = E[(x_t-\dxpt)(x_t-\dxpt)']
+\end{split}
+\end{equation}
+natomiast $\dPt$ to macierz kowariancji dla $x_t$ w chwili $t$ definiowana jako:
+\begin{equation}
+\label{eq:ppt1}
+\begin{split}
+\dPt = E[(x_t-\dxt)(x_t-\dxt)']
+\end{split}
+\end{equation}
+W chwili uaktualniania $\dPtt$ jest znana - obliczana jest ona bowiem w chwili $t-1$.
+
+}
+
+\subsection{Faza uaktualnienia}
+
+\frame{\frametitle{Faza uaktualnienia} 
+
+W momencie dokonania pomiaru następuje uatktualnienie wartości zmiennych stanu, na podstawie następujących wzorów:
+
+\begin{equation}
+\label{eq:gain}
+K_t = (\dPpt H')(H \dPpt H' + V)^{-1}
+\end{equation}
+\begin{equation}
+\label{eq:mean}
+\dxt = \dxpt + K_t(y_t - H\dxpt)
+\end{equation}
+\begin{equation}
+\label{eq:cov}
+\dPt = \dPpt - K_tH\dPpt 
+\end{equation}
+Najbardziej kluczową wartością jest $K_t$ nazywane wzmocnieniem Kalmana - określa wpływ zaobserwowanego odychenia wartości obserwowanej od predykcji ($y_t - H\dxpt$) na aktualizację wartości zmiennych stanu - im $K_t$ większe, tym większa waga będzie przykładana obserwacji.
+
+
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\frame{\frametitle{Filtr Kalmana - charakterystyka czasowa - położenie} 
+
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/kalman1}
+\end{figure}
+
+}
+
+\frame{\frametitle{Filtr Kalmana - charakterystyka czasowa - prędkość} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/kalman2}
+\end{figure}
+}
+
+\section{Zestawienie filtrów}
+
+\frame{\frametitle{Zestawienie filtrów- charakterystyka czasowa - położenie} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/zestawienie1}
+\end{figure}
+}
+
+\frame{\frametitle{Zestawienie filtrów- charakterystyka czasowa - prędkość} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/zestawienie2}
+\end{figure}
+}
+
+\frame{\frametitle{Zestawienie filtrów- błąd położenia} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/zestawienie3}
+\end{figure}
+}
+
+\frame{\frametitle{Zestawienie filtrów- błąd prędkości} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/zestawienie4}
+\end{figure}
+}
+
+
+\frame{\frametitle{Filtr Kalmana - współczynnik tłumienia szumów} 
+
+\begin{align*}
+WTS = \frac{RMS(x_R - x_P)}{RMS(x_R-x_F)} = \frac{RMS(e_P)}{RMS(e_F)}
+\end{align*}
+gdzie $x_R$ - pozycja rzeczywista, $x_P$ - pozycja zmierzona obarczona błędem, $x_F$ - pozycja po filtracji.
+
+W związku z czym im większy współczynnik WTS tym lepsze tłumienie szumów pomiarowych i lepsza estymacja zmiennych stanu. 
+
+}
+
+\frame{\frametitle{Zestawienie filtrów - współczynnik tłumienia szumów - położenie} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/WTS}
+\end{figure}
+}
+
+\frame{\frametitle{Zestawienie filtrów - współczynnik tłumienia szumów - prędkość} 
+\begin{figure}
+\includegraphics[scale = 0.6]{obrazki/WTS2}
+\end{figure}
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Przykład ekonomiczny}
+
+\frame{\frametitle{Prosty przykład ekonomiczny - trend liniowy} 
 
 Bardzo prostym i intuicyjnym przykładem jest model trendu liniowego - który możemy zapisać w przestrzeni stanów w postaci:
 \begin{equation}
@@ -173,116 +472,39 @@ source("KodR/exTrendEstPar.R")
 }
 
 
+\frame{\frametitle{Model trendu liniowego - przykład empiryczny} 
+<<echo=FALSE,fig.height = 3, fig.width = 4, message = FALSE>>=
+source("KodR/estModelSP500.R")
+@
+
+}
+
+
+\frame{\frametitle{Model trendu liniowego - przykład empiryczny - predykcja} 
+<<echo=FALSE,fig.height = 4, fig.width = 6, message = FALSE>>=
+source("KodR/estForecastSP500.R")
+@
+
+}
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\section{Filtr Kalmana}
 
-\frame{\frametitle{Filtr Kalmana} 
-
-
-"Zadaniem filtracji Kalmana jest estymacja wartości wektora stanu x oraz wektora wyjściowego y na podstawie zmierzonych próbek obarczonych szumem".\cite{osowki}.
-
-Cały proces przebiega dwuetapowo - najpierw następuje faza predyckji na chwilę $t$, na podstawie chwili $t-1$, następnie na podstawie obserwacji (już w chwili t), następuje uaktualnienie estymowanych wartości.
-
-Dla ustalenia uwagi:
-\begin{equation}
-\begin{split}
-x_{t} = Ax_{t-1} + Bu_t + w_t \\
-y_t = Hx_t + v_t
-\end{split}
-\end{equation}
-\begin{tabular}{rr}
-
-  $x_t$ - wektor zmiennych nieobserwowanych   & $u_t$ - wektor sterowania - znany\\
-  $y_t$ - wektor wyjścia - obserwowany & A,B,H - znane macierze \\
-  $w_t \sim GWN(0,W)$ & $v_t \sim GWN(0,V)$ \\
-  W i V - diagonalne macierze kowariancji. &
-
-\end{tabular} 
-
-}
-
-\subsection{Faza predykcji}
-
-\frame{\frametitle{Faza predykcji} 
-
-Faza predyckji opisana jest następującymi wzorami:
-\begin{equation}
-\label{eq:predmean}
-\dxpt = A\dxtt + Bu_t 
-\end{equation}
-\begin{equation}
-\label{eq:predcov}
-\dPpt = AP_{t-1|t-1}A' + W
-\end{equation}
-We wzorach pojawia się nowa macierz $\dPpt$ - jest to macierz kowariancji dla prognozy pod warunkiem chwili $t-1$, definiowana jako:
-\begin{equation}
-\label{eq:ppt1}
-\begin{split}
-\dPpt = E[(x_t-\dxpt)(x_t-\dxpt)']
-\end{split}
-\end{equation}
-natomiast $\dPt$ to macierz kowariancji dla $x_t$ w chwili $t$ definiowana jako:
-\begin{equation}
-\label{eq:ppt1}
-\begin{split}
-\dPt = E[(x_t-\dxt)(x_t-\dxt)']
-\end{split}
-\end{equation}
-W chwili uaktualniania $\dPtt$ jest znana - obliczana jest ona bowiem w chwili $t-1$.
-
-}
-
-\subsection{Faza uaktualnienia}
-
-\frame{\frametitle{Faza uaktualnienia} 
-
-W momencie dokonania pomiaru następuje uatktualnienie wartości zmiennych stanu, na podstawie następujących wzorów:
-
-\begin{equation}
-\label{eq:gain}
-K_t = (\dPpt H')(H \dPpt H' + V)^{-1}
-\end{equation}
-\begin{equation}
-\label{eq:mean}
-\dxt = \dxpt + K_t(y_t - H\dxpt)
-\end{equation}
-\begin{equation}
-\label{eq:cov}
-\dPt = \dPpt - K_tH\dPpt 
-\end{equation}
-Najbardziej kluczową wartością jest $K_t$ nazywane wzmocnieniem Kalmana - określa wpływ zaobserwowanego odychenia wartości obserwowanej od predykcji ($y_t - H\dxpt$) na aktualizację wartości zmiennych stanu - im $K_t$ większe, tym większa waga będzie przykładana obserwacji.
-
-
-}
-
-\subsection{Wzmocnienie Kalmana}
-
-\frame{\frametitle{Wzmocnienie Kalmana} 
-
-
-}
-
-\section{Przykład - mechanika}
-
-\frame{\frametitle{Przykład - mechanika} 
-
-}
-
-
-\section{Przykład - estymacja procesu SV}
-
-\frame{\frametitle{Przykład - estymacja procesu SV} 
-
-}
 
 
 \section{Dylematy?}
 
 \frame{\frametitle{Dylematy?} 
+
+\begin{itemize}
+\item W modelach znanych z teorii sterowania większość parametrów przestrzeni stanu jest znana - są to własności wynikające z fizyki.
+\item W przypadku modeli ekonomicznych w zasadzie wszystkie parametry podlegają estymacji, w tym rozmiar przestrzeni stanu (np. klasyczny problem związany z doborem zmiennych).
+\end{itemize}
 
 }
 
@@ -302,6 +524,7 @@ Najbardziej kluczową wartością jest $K_t$ nazywane wzmocnieniem Kalmana - okr
 \frame{\frametitle{Bibliografia - układy dynamiczne} 
 \begin{refsection}
 
+\nocite{ogata}
 \nocite{osowski}
 \printbibliography[heading=subbibliography]
 
