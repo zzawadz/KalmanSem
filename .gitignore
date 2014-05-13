@@ -22,3 +22,4 @@ cache
 *.bbl
 Kalmany
 *.dvi
+*.sync*

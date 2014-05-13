@@ -1,0 +1,375 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{polski}
+\usepackage{amsmath}
+
+\title{Filtr Kalmana}
+\author{Zygmunt Zawadzki, Mateusz Stachnik}
+
+
+
+\begin{document}
+\maketitle
+
+\newcommand{\dxpt}{\ensuremath{\hat{x}_{t|t-1}}}
+\newcommand{\dxtt}{\ensuremath{\hat{x}_{t-1|t-1}}}
+\newcommand{\dxt}{\ensuremath{\hat{x}_{t|t}}}
+
+\newcommand{\dPpt}{\ensuremath{{P}_{t|t-1}}}
+\newcommand{\dPtt}{\ensuremath{{P}_{t-1|t-1}}}
+\newcommand{\dPt}{\ensuremath{{P}_{t|t}}}
+\tableofcontents
+
+\section{Wstęp}
+
+Dokument ten stanowi zbiór notatek dotyczących filtru Kalmana.
+
+\section{Pewne zabawy z rozkładem apriori i aposterori}
+
+Zakładamy, że rozkład próbkowy jest to jednowymiarowy rozkład normalny (mamy tylko jedną obserwację), o wartości oczekiwanej $\mu$ i znanej wariancji $\sigma^2$:
+\begin{equation}
+p_{x}(x|\mu) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{\frac{-(x-\mu)^2}{2\sigma^2}}
+\end{equation},
+natomiast rozkład a priori również jest rozkładem normalnym o wartości oczekiwanej $\theta$ i wariancji $\tau^2$.
+\begin{equation}
+p(\mu) = \frac{1}{\sqrt{2\pi\tau^2}}e^{\frac{-(\mu-\theta)^2}{2\tau^2}}
+\end{equation}
+
+Korzystając z wzoru Bayesa możemy zapisać:
+\begin{equation}
+p(\mu|x) = \frac{p(x|\mu)p(\mu)}{p(x)} \propto p(x|\mu)p(\mu)
+\end{equation},
+Rozpisując:
+\begin{equation}
+p(x|\mu)p(\mu) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{\frac{-(x-\mu)^2}{2\sigma^2}}\frac{1}{\sqrt{2\pi\tau^2}}e^{\frac{-(\mu-\theta)^2}{2\tau^2}}
+\end{equation},
+dalej zauważając, że fragmenty $\frac{1}{\sqrt{2\pi\sigma^2}}$ i $\frac{1}{\sqrt{2\pi\tau^2}}$, są niezależne od $\mu$ i stałe można dalej zapisać, że:
+\begin{equation}
+\label{eq:rawcore}
+p(x|\mu)p(\mu) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{\frac{-(x-\mu)^2}{2\sigma^2}}\frac{1}{\sqrt{2\pi\tau^2}}e^{\frac{-(\mu-\theta)^2}{2\tau^2}} \propto e^{\frac{-(x-\mu)^2}{2\sigma^2} + \frac{-(\mu-\theta)^2}{2\tau^2}} 
+\end{equation}
+
+Teraz należałoby pokazać, że uzyskane równanie jest jądrem znanego rozkładu (a najlepiej normalnego). Gdyby więc udało mi się zapisać \ref{eq:rawcore} w postaci:
+\begin{equation}
+\label{eq:new}
+e^{\frac{-(\mu-\mu_{new})^2}{2\sigma_{new}^2}}
+\end{equation},
+
+wtedy natychmiast stwierdziłbym, że jest to jądro rozkładu normalnego i teraz wystarczy tylko dobrać odpowiednią stałą i mam gotowy rozkład a posteriori.
+
+Należy więc dokonać paru prostych przekształceń, jednak w pewnym momencie należy zastosować pewną sztuczkę, dlatego przedstawię wszystko:-). Dla wygody rachunkowej chwilowo pozbywam się $e$ i $-\frac{1}{2}$ i całe równanie zapisuję jako:
+
+\begin{equation}
+\begin{split}
+\frac{(x-\mu)^2}{\sigma^2} + \frac{(\mu-\theta)^2}{\tau^2} = \frac{x^2+\mu^2-2x\mu}{\sigma^2} + \frac{\theta^2+\mu^2-2\mu\theta}{\tau^2} = \\
+= \frac{(x^2+\mu^2-2x\mu)\tau^2}{\sigma^2\tau^2} + \frac{(\theta^2+\mu^2-2\mu\theta)\sigma^2}{\tau^2\sigma^2} = \\
+= \frac{(x^2+\mu^2-2x\mu)\tau^2 + (\theta^2+\mu^2-2\mu\theta)\sigma^2}{\sigma^2\tau^2} = \\
+= \frac{\mu^2(\sigma^2+\tau^2) - 2\mu(\tau^2 x+\sigma^2 \theta) + \tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2} = \\ =
+\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2} + \frac{\tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2} 
+\end{split}
+\end{equation}
+
+Gdyby otrzymany wynik wstawić z powrotem do wyrażenia z $e$, otrzymamy:
+
+\begin{equation}
+\label{eq:sztuczka1}
+e^{-\frac{1}{2}(\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2} + \frac{\tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2})}
+\end{equation},
+
+porównując to z rozpisanym wyrażeniem \ref{eq:new}:
+
+\begin{equation}
+\label{eq:sztuczka2}
+e^{\frac{-(\mu-\mu_{new})^2}{2\sigma_{new}^2}} = e^{-\frac{1}{2}(\frac{\mu^2}{\sigma_{new}^2}-\frac{2\mu\mu_{new}}{\sigma_{new}^2}+\frac{\mu_{new}^2}{\sigma_{new}^2})}
+\end{equation},
+można zauważyć, że są w sumie podobne. W tym momencie, by znaleźć wartość $\mu_{new}$ i $\sigma^2_{new}$, dobrze jest wykonać pewną sztuczkę. Jeżeli zauważymy, że w równaniach \ref{eq:sztuczka1} i \ref{eq:sztuczka2}, część $\frac{\tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2}$ i $\frac{\mu_{new}^2}{\sigma_{new}^2}$, nie zależą od $\mu$, znaczy to, że można je "wyrzucić" do mitycznej stałej normującej (analogiczny krok jak w przypadku pozbywania się $\frac{1}{\sqrt{2\pi\sigma^2}}$ i $\frac{1}{\sqrt{2\pi\tau^2}}$ z rozkładu aposterori - w zasadzie ciągle na nim pracujemy!). Dla utrzymania uwagi ten krok też przedstawię:
+
+\begin{equation}
+\begin{split}
+e^{-\frac{1}{2}(\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2} + \frac{\tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2})}  = e^{-\frac{1}{2}(\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2})} e^{-\frac{1}{2}\frac{\tau^2 x^2 + \sigma^2 \theta^2}{\sigma^2\tau^2})} \propto \\ \propto e^{-\frac{1}{2}(\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2})}\\
+e^{-\frac{1}{2}(\frac{\mu^2}{\sigma_{new}^2}-\frac{2\mu\mu_{new}}{\sigma_{new}^2}+\frac{\mu_{new}^2}{\sigma_{new}^2})} = e^{-\frac{1}{2}(\frac{\mu^2}{\sigma_{new}^2}-\frac{2\mu\mu_{new}}{\sigma_{new}^2})}e^{-\frac{1}{2}\frac{\mu_{new}^2}{\sigma_{new}^2}} \propto e^{-\frac{1}{2}(\frac{\mu^2}{\sigma_{new}^2}-\frac{2\mu\mu_{new}}{\sigma_{new}^2})}
+\end{split}
+\end{equation},
+
+teraz już praktycznie koniec, teraz wystarczy przyrównać do siebie oba równania i wyliczyć $\mu_{new}$ i $\sigma^2_{new}$. Z poniższej postaci:
+
+\begin{equation}
+\begin{split}
+e^{-\frac{1}{2}(\frac{\mu^2}{\sigma_{new}^2}-\frac{2\mu\mu_{new}}{\sigma_{new}^2})} = e^{-\frac{1}{2}(\frac{\mu^2(\sigma^2+\tau^2)}{\sigma^2\tau^2} - \frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2})}
+\end{split}
+\end{equation}, od razu widać, że $\sigma^2_{new} = \frac{\sigma^2\tau^2}{\sigma^2+\tau^2}$, natomiast przekształcając $\frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2\tau^2}$ w $\frac{2\mu(\tau^2 x+\sigma^2 \theta)(\sigma^2+\tau^2)}{\sigma^2\tau^2(\sigma^2+\tau^2)}$ i podstawiając $\sigma^2_{new}$, otrzymujemy $\frac{2\mu(\tau^2 x+\sigma^2 \theta)}{\sigma^2_{new}(\sigma^2+\tau^2)}$, łatwo więc zauważyć, że $\mu_{new} = \frac{\tau^2 x+\sigma^2 \theta}{\sigma^2+\tau^2}$.
+
+Ostatecznie wartość oczekiwana rozkładu aposterori:
+\begin{equation}
+\label{eq:munew}
+\mu_{new} = \frac{\tau^2 x+\sigma^2 \theta}{\sigma^2+\tau^2}
+\end{equation},
+i wariancja:
+\begin{equation}
+\label{eq:sigmanew}
+\sigma^2_{new} = \frac{\sigma^2\tau^2}{\sigma^2+\tau^2}
+\end{equation}
+
+Patrząc na wzór \ref{eq:munew} można zauważyć, że w zasadzie wartość oczekiwana, rozkładu aposterori przy podanych założeniach, jest średnią ważoną wariancjami rozkładu apriori i aposterori.
+
+Pisząc ostatecznie trochę jednak przesadziłem, gdyż wzory \ref{eq:munew} i \ref{eq:sigmanew} można przedstawić w trochę innej formie która pozwoli łatwo pewną zależność. W tym przypadku nie będę pisał wszystkich wyprowadzeń, są one dosyć trywialne (jeżeli jednak była by taka potrzeba - proszę mówić):
+
+\begin{equation}
+\label{eq:mu}
+\mu_{new} = \theta + \frac{\tau^2(x-\theta)}{\sigma^2+\tau^2} = \theta + \frac{\tau^2}{\sigma^2+\tau^2}(x-\theta)
+\end{equation},
+i wariancja:
+\begin{equation}
+\label{eq:sigma}
+\sigma^2_{new} = \tau^2 - \frac{\tau^4}{\sigma^2+\tau^2}
+\end{equation}
+
+Wzór \ref{eq:mu} pokazuje, że wartość oczekiwana rozkłądu aposterori, to wartość oczekiwana apriori dodać przeskalowana różnica pomiędzy obserwacją i wartością oczekiwaną apriori. Podana będzie później kluczowa w pokazaniu czym jest filtr Kalmana.
+
+\section{Filtr Kalmana}
+
+W filtrze Kalmana przyjmuje się, że obserwowany jest pewien proces $z_t$, który bezpośrednio zależy od procesu ukrytego $x_t$. Oba procesy można zapisać w postaci:
+\begin{equation}
+\label{eq:state}
+x_t = A x_{t-1} + B u_{t} + w_{t}
+\end{equation},
+\begin{equation}
+\label{eq:obs}
+z_t = H x_{t} + v_{t}
+\end{equation}, gdzie macierz A określa zależność procesu ukrytego w chwili $t$ od stanu w chwili $t-1$, w $u_t$ znajduje się sterowanie procesem (zewnętrzna ingerencja w proces, za chwilę będzie podany pewien intuicyjny przykład), macierz $B$ określa zależność stanu $x_t$ od sterowania, natomiast $w_t$ jest gaussowskim białym szumem o zerowej wartości oczekiwanej i znanej wariancji. Natomiast macierz $H$ jest macierzą przejścia od procesu ukrytego, do obserwowanego.
+
+Na pierwszy rzut oka całe to tak sformułowany model może wydawać się dziwny i nienaturalny - a przez to bezużyteczny! Poniżej jednak pewien przykład:
+
+\subsection{Przykład modelu}
+\label{example2}
+Jedziemy samochodem. Naszym celem jest szacowanie w każdej chwili prędkości i drogi którą pokonaliśmy od rozpoczęcia podróży. Pojawił się jednak pewien problem natury technicznej - prędkościomierz nie działa! W normalnych warunkach byłoby dosyć niebezpiecznie podróżować takim samochodem, jednak posiadamy GPS, który podaje nam nasze położenie. Dodatkowo uzbrajając się w wiedzę związaną z filtrem Kalmana budujemy stosowny model (dla ułatwienia przyjmiemy również, że hamulce nie działają, przez co nie ma się żadnego wpływu na prędkość:-)):
+\begin{itemize}
+\item $x_{1t}$ - oznacza położenie w chwili t.
+\item $x_{2t}$ - poszukiwana prędkość w chwili t
+\item $z_t$ - wskazanie GPS odnośnie pozycji.
+\end{itemize}
+
+Sięgając do wzorów z fizyki  znajdziemy, że wzór na drogę w ruchu jednostajnym prostoliniowym to $x_{1t} = x_{1t-1} + (x_{2t-1}\cdot\Delta t)$, tak więc macierze A, B i H będą wyglądały w ten sposób:
+
+\begin{equation}
+ A = \left( \begin{array}{cc}
+1 & \Delta t\\
+0 & 1\end{array} \right)
+\end{equation},
+
+\begin{equation}
+ B = \left( \begin{array}{cc}
+0 & 0\\
+0 & 0\end{array} \right)
+\end{equation}
+
+\begin{equation}
+H' = \left( \begin{array}{c}
+1 \\
+0 \end{array} \right)
+\end{equation}
+
+
+\subsection{Równania w filtrze Kalmana}
+
+Oznaczenia:
+\begin{itemize}
+\item \dxt - wartość oczekiwana w chwili $t$, pod warunkiem chwili $t$
+\item \dxpt - prognoza wartości oczekiwanej na chwilę $t$, przy znajomości procesu do chwili $t-1$
+\item \dPt - macierz kowariancji dla $x_t$ w chwili $t$
+\item \dPtt - macierz kowariancji prognozy $x_t$ na chwilę $t$, pod warunkiem chwili $t-1$
+\end{itemize}
+
+Faza predykcji:
+\begin{equation}
+\label{eq:predmean}
+\dxpt = A\dxtt + Bu_t 
+\end{equation}
+\begin{equation}
+\label{eq:predcov}
+\dPpt = AP_{t-1|t-1}A' + W
+\end{equation}
+
+Faza uaktualnienia:
+
+\begin{equation}
+\label{eq:gain}
+K_t = (\dPpt H')(H \dPpt H' + R)^{-1}
+\end{equation},
+\begin{equation}
+\label{eq:mean}
+\dxt = \dxpt + K_t(z_t - H\dxpt)
+\end{equation}
+\begin{equation}
+\label{eq:cov}
+\dPt = \dPpt - K_tH\dPpt 
+\end{equation}
+
+\subsection{Wyprowadzenie wzorów - faza predykcji}
+\label{predykcja}
+Poniżej znaduje się wyprowadznie wzorów związanych z fazą predykcjiw  filtrze Kalmana - nic trudnego:
+
+Wpierw prognoza wartości oczekiwanej, na okres $t$, pod warunkiem znajomości wartośći oczekiwanej w czasie $t-1$.
+\begin{equation}
+\begin{split}
+\label{eq:mean1}
+\dxpt = E(x_t|\dxtt) = E(A\dxtt + Bu_t + w_t) = \\ = A\dxtt + Bu_t + E(w_t) = A\dxtt + Bu_t 
+\end{split}
+\end{equation}
+
+Komentarz: W powyższym wyprowadzeniu należy jedynie zauważyć, że   \dxtt jest znane, $u_t$ również, a $w_t$ nie zależy od \dxtt i jego wartość oczekiwana jest równa $0$. Jasno widać, że \ref{eq:mean1} zgadza się z \ref{eq:predmean}.
+
+Teraz będzie weselej - macierz kowariancji dla prognozy $x_t$ (\dPpt):
+\begin{equation}
+\label{eq:ppt1}
+\begin{split}
+\dPpt = E[(x_t-\dxpt)(x_t-\dxpt)']
+\end{split}
+\end{equation}
+Na początek dobrze jest policzyć samo:
+\begin{equation}
+\label{eq:ppt2}
+\begin{split}
+x_t-\dxpt = Ax_t + Bu_t + w_t - A\dxtt - Bu_t = A(x_t - \dxtt) + w_t
+\end{split}
+\end{equation}
+Teraz podstawiamy \ref{eq:ppt2} do \ref{eq:ppt1} i otrzymujemy:
+\begin{equation}
+\label{eq:ppt3}
+\begin{split}
+\dPpt = E[(x_t-\dxpt)(x_t-\dxpt)'] = E[(A(x_t - \dxtt) + w_t)(A(x_t - \dxtt) + w_t)'] \\ = AE[(x_t - \dxtt)(x_t - \dxtt)']A' + AE[(x_t - \dxtt)w_t'] + \\ + E[w_t(x_t - \dxtt)']A' + E(w_tw_t')
+\end{split}
+\end{equation}
+Teraz należy zauważyć, że $E[(x_t - \dxtt)(x_t - \dxtt)']$ to macierz kowariancji w chwili $t-1$ - czyli $P_{t-1|t-1}$,  $E(w_tw_t')$, to macierz kowariancji $w_t$ - czyli $W$, a kowariancja $E[w_t(x_t - \dxtt)']$ wynosi 0. Ostatecznie otrzymujemy:
+\begin{equation}
+\label{eq:ppt}
+\dPpt = AP_{t-1|t-1}A' + W
+\end{equation}
+
+\subsection{Wyprowadzenie wzorów - faza uaktualnienia - intuicyjnie}
+\label{intuicja}
+
+W tej sekcji zostaną wyprowadzone wzory związane z fazą predykcji - jednak przy pewnym założeniu odnośnie macierzy $H$ - celem takiego podejścia jest pokazanie pewnych związków filtru Kalmana i rekurencyjnego obliczania parametrów rozkładu aposterori pokazanego wcześniej.  
+
+Na potrzeby dalszych rozważań przyjmijmy, że macierz $H$, jest macierzą kwadratową (w ogólności dla filtru Kalmana tak być nie musi) i do tego jest nieosobliwa($det(H)\neq 0$). Wyprowadzone wzory co prawda będą takie same jak w przypadku uchylenia powyższego założenia, jednak proces wyprowadzania będzie zupełnie inny!
+
+Teraz czas na Bayesizm - Na początek przyjmiemy, że w chwili $t$ rozkład apriori dla zmiennej losowej $x_t$, to $N(\dxpt,\dPpt)$ - takie założenie wydaje się być sensowne - jako rozkład apriori przyjmujemy prognozy parametrów z okresu $t-1$ na okres $t$. Teraz dobrze byłoby skorzystać ze wzorów \ref{eq:mu} i \ref{eq:sigma}, problemem jest jednak to, że $x_t$ jest nieobserwowalne - tzn. nie ma nadziei, że pojawi się nowa obserwacja. Mamy jednak dostęp realizacji $z_t$. Można więc spróbować na podstawie wzorów \ref{eq:mu} i \ref{eq:sigma} wyznaczyć rozkład aposterori dla zmiennej losowej $Hx_t$, a potem powrócić do $x_t$. Rozkład apriori dla $Hx_t$ to $N(H\dxpt,H \dPpt H')$. Ze wzoru \ref{eq:mu} mamy:
+\begin{equation}
+\label{eq:mk1}
+\begin{split}
+H\dxt = H\dxpt + \frac{H \dPpt H'}{H \dPpt H' + R}(z_t - H\dxpt)
+\end{split}
+\end{equation}, 
+mnożąc lewostronnie przez $H^{-1}$ (właśnie po to było założenie o nieosobliwości macierzy H), otrzymujemy:
+
+\begin{equation}
+\begin{split}
+\label{eq:mk2}
+\dxt = \dxpt + (\dPpt H')(H \dPpt H' + R)^{-1}(z_t - H\dxpt)
+\end{split}
+\end{equation}
+Natomiast dla kowariancji:
+\begin{equation}
+\begin{split}
+H\dPt H' = H\dPpt H' - (H\dPpt H')(H \dPpt H' + R)^{-1}(H\dPpt H')'
+\end{split}
+\end{equation},
+i analogicznie jak w \ref{eq:mk1} przez $H^{-1}$ i $(H')^{-1}$, otrzymując:
+\begin{equation}
+\begin{split}
+\label{eq:mk4}
+\dPt = \dPpt - (\dPpt H')(H \dPpt H' + R)^{-1}H\dPpt 
+\end{split}
+\end{equation},
+dla wygody zauważamy, że w obu wypadkach \ref{eq:mk2} i \ref{eq:mk4} występuje ten sam fragment postaci: $(\dPpt H')(H \dPpt H' + R)^{-1}$ - dobrze nazwać go sobie jakoś nazwać - np $K_t$:
+\begin{equation}
+\label{eq:mk6}
+K_t = (\dPpt H')(H \dPpt H' + R)^{-1}
+\end{equation},
+i po podstawieniu do \ref{eq:mk2} i \ref{eq:mk4}, otrzymujemy:
+\begin{equation}
+\label{eq:mk7}
+\dxt = \dxpt + K_t(z_t - H\dxpt)
+\end{equation}
+\begin{equation}
+\label{eq:mk8}
+\dPt = \dPpt - K_tH\dPpt 
+\end{equation},
+teraz uważny obserwator porównując wzory \ref{eq:mk6}, \ref{eq:mk7}, \ref{eq:mk8} ze wzorami \ref{eq:gain}, \ref{eq:mean} i \ref{eq:cov}, zauważy, że są identyczne!
+
+Niestety trzeba pamiętać o przyjętym założeniu, że $H$ jest macierzą nieosobliwą. W następnej sekcji powyższe wzory zostaną wyprowadzone w trochę inny sposób.
+
+\subsection{Wyprowadzanie wzorów - uaktualnianie}
+
+Powyżej wzory związane z filtrem Kalmana zostały wyprowadzone przy założeniu, że macierz $H$ jest macierzą nieosobliwą - jest to bardzo krępujące, gdyż w większości zastosować $H$ nie jest nawet kwadratowa (chociażby w przykładzie w \ref{example2})!
+
+By pozbyć się tego założenia, trzeba podejść do problemu w inny sposób. Zacznijmy od intuicji - $x_t$ jest nieobserwowane, przez co nie ma szans na bezpośrednie zastosowanie formuły \ref{eq:mu}. Jeżeli $H$ nie jest kwadratowa, to nie będą możliwe do wykonania kroki przedstawione w poprzedniej sekcji. Mamy więc do dyspozycji realizacje $z_t$ i predykcję wartości oczekiwanej z poprzedniego okresu \dxpt. Trzeba zastosować podejście w pewnym sensie inżynieryjne. Przyjmijmy, że im większe różnica pomiędzy wartościami które możemy wyznaczyć ($z_t - H\dxpt$), tym zmiana $\dxt$, powinna być większa. Jako, że różnica $z_t - H\dxpt$ nie koniecznie musi być w tym samym wymiarze, co $\dxt$, należy wykorzystać jakąś macierz - dowolnej postaci!!! - która sprawi, że wymiary pomiędzy $\dxt$ i $z_t - H\dxpt$ będą się zgadzać. Taką macierz możnaby nazwać na przykład $Z_t$. Otrzymujemy więc:
+\begin{equation}
+\label{eq:zt1}
+\dxt = \dxpt + Z_t(z_t - H\dxpt)
+\end{equation}.
+Powyższe równanie wygląda znajomo - tylko zamiast $K_t$ występuje $Z_t$.
+
+W tej chwili $Z_t$ jest dowolną macierzą, której jedyną własnością, jest to, że wymiary macierzy w równaniu \ref{eq:zt1} zgadzają się ze sobą. Należałoby przyjąć jakieś kryterium, względem którego możnaby wyznaczyć najbardziej optymalną postać $Z_t$. Tym kryterium może być, np. minimalizacja wartości oczekiwanej kwadratów reszt - czyli:
+\begin{equation}
+E(||x_t-\dxt ||^2) \rightarrow min.
+\end{equation}.
+Tak przedstawiony problem, jest równoważny minimalizacji śladu macierzy kowariancji $Cov(x_t-\dxt) = \dPt$. Należy zwrócić uwagę, że macierz \dPt - na razie nie ma nic wspólnego z macierzą wyznaczoną w poprzednim podrozdziale  -jednak takie oznaczenie jest bardzo wygodne. Można powiedzieć, że należy zapomnieć o wszystkim z \ref{intuicja} (natomiast wszystkie wzory z \ref{predykcja} pozostają w mocy).
+
+\begin{equation}
+\begin{split}
+\label{eq:zt2}
+\dPt = Cov(x_t-\dxt) = Cov[x_t - \dxpt - Z_t(z_t - H\dxpt)] = \\ = Cov[x_t - \dxpt - Z_tz_t + Z_tH\dxpt] = Cov[x_t - \dxpt - Z_tHx_t - Z_tv_t + Z_tH\dxpt] = \\ = Cov[I(x_t - \dxpt) - Z_tH(x_t - \dxpt) - Z_tv_t] = Cov[(I - Z_tH)(x_t - \dxpt) - Z_tv_t]
+\end{split}
+\end{equation},
+Powyższe przejścia wyglądają źle, ale nie są trudne, następuje podstawienie wzoru \ref{eq:zt1}, następnie, za $z_t$, podstawione zostaje \ref{eq:obs}. Potem następują zwykłe przekształcenia algebraiczne. By uprościć obliczenia należy zauważyć, że kowariancja pomiędzy $v_t$, a resztą wynosi $0$ i wtedy możemy zapisać:
+\begin{equation}
+\begin{split}
+\dPt = Cov[(I - Z_tH)(x_t - \dxpt)] + Cov[Z_tv_t] = \\ = (I - Z_tH)Cov[(x_t - \dxpt)](I - Z_tH)' + Z_tCov[v_t]Z_t' = \\ = (I - Z_tH)\dPpt(I - Z_tH)' + Z_tRZ_t'
+\end{split}
+\end{equation}
+
+Tę postać należy zapamiętać:
+\begin{equation}
+\dPt = (I - Z_tH)\dPpt(I - Z_tH)' + Z_tRZ_t'
+\end{equation}, poniżej jeszcze wersja rozpisana, która przyda się już za chwilę:
+
+\begin{equation}
+\begin{split}
+\dPt = \dPpt - \dPpt Z_t'H' - Z_tH\dPpt + Z_tH\dPpt H'Z_t' + Z_tRZ_t' = \\ = \dPpt - \dPpt Z_t'H' - Z_tH\dPpt + Z_t(H\dPpt H' + R)Z_t'
+\end{split}
+\end{equation}
+
+Teraz szukamy, $Z_t$ minimalizującego ślad macierz \dPt :
+\begin{equation}
+\begin{split}
+\frac{d\dPt}{dZ_t} = -2\dPpt H' + 2Z_t(H\dPpt H' + R) = 0 \\
+Z_t(H\dPpt H' + R) = \dPpt H' \\
+Z_t = \dPpt H' (H\dPpt H' + R)^{-1}
+\end{split}
+\end{equation},
+Porównując ten wzór z \ref{eq:gain}, łatwo zauważyć, że $Z_t = K_t$, czyli $K_t$ w filtrze Kalmana minimalizuje sumę kwadratów reszt.
+
+\section{Prosta implementacja filtra Kalmana w R}
+
+<<>>=
+#Wzory na faze predyckji:
+calcXt1 = function(A,xt,B = NULL,u) 
+{
+  if(is.null(B)) return(A%*%xt)
+  return(A%*%xt + B%*%u)
+}
+
+# Faza uaktualniania:
+calcPt1 = function(A,Pt,Q) A%*%Pt%*%t(A) + Q
+kalmanGain = function(Pt1,H,R) Pt1%*%t(H)%*%solve(H%*%Pt1%*%t(H)+R)
+calcXt = function(xt1,K,z,H) xt1 + K%*%(z-H%*%xt1)
+calcPt = function(Pt1,K,H) Pt1-K%*%H%*%Pt1
+@
+
+
+
+\end{document}
