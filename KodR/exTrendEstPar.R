@@ -1,8 +1,7 @@
 ### Wpierw nalezy uruchomic exTrend.R!!!
 #source("KodR/exTrend.R")
 
-
-model = dlmModPoly(dV = 3, dW = c(1,0.2))
+model = dlmModPoly(dV = 3^2, dW = c(1,0.2)^2)
 filt  = dlmFilter(y,model)
 
 
